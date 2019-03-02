@@ -23,7 +23,7 @@ const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin-alt');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
-
+const autoprefixer = require('autoprefixer');
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
@@ -36,6 +36,7 @@ const useTypeScript = fs.existsSync(paths.appTsConfig);
 
 // style files regexes
 const cssRegex = /\.css$/;
+const lessRegex = /\.less$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
 const sassModuleRegex = /\.module\.(scss|sass)$/;
@@ -136,7 +137,7 @@ module.exports = function(webpackEnv) {
       // require.resolve('webpack-dev-server/client') + '?/',
       // require.resolve('webpack/hot/dev-server'),
       isEnvDevelopment &&
-        require.resolve('react-dev-utils/webpackHotDevClient'),
+        require.resolve('react-dev-utils.js/webpackHotDevClient'),
       // Finally, this is your app's code:
       paths.appIndexJs,
       // We include the app code last so that if there is a runtime error during
@@ -299,7 +300,7 @@ module.exports = function(webpackEnv) {
           use: [
             {
               options: {
-                formatter: require.resolve('react-dev-utils/eslintFormatter'),
+                formatter: require.resolve('react-dev-utils.js/eslintFormatter'),
                 eslintPath: require.resolve('eslint'),
                 
               },
@@ -336,6 +337,11 @@ module.exports = function(webpackEnv) {
                 ),
                 
                 plugins: [
+                  [
+                      'import',
+                    {"libraryName":"antd",style:true}
+                  ]
+                    ,
                   [
                     require.resolve('babel-plugin-named-asset-import'),
                     {
@@ -394,8 +400,8 @@ module.exports = function(webpackEnv) {
               use: getStyleLoaders({
                 importLoaders: 1,
                 sourceMap: isEnvProduction
-                  ? shouldUseSourceMap
-                  : isEnvDevelopment,
+                    ? shouldUseSourceMap
+                    : isEnvDevelopment,
               }),
               // Don't consider CSS imports dead code even if the
               // containing package claims to have no side effects.
@@ -405,6 +411,36 @@ module.exports = function(webpackEnv) {
             },
             // Adds support for CSS Modules (https://github.com/css-modules/css-modules)
             // using the extension .module.css
+            {
+              test: lessRegex,
+              use: [
+                require.resolve('style-loader'),
+                {
+                  loader: require.resolve('css-loader'),
+                  options: {importLoaders: 1,},
+                },
+                {
+                  loader: require.resolve('postcss-loader'),
+                  options: {
+                    // Necessary for external CSS imports to work
+                    // https://github.com/facebookincubator/create-react-app/issues/2677ident: 'postcss',
+                    plugins: () => [
+                      require('postcss-flexbugs-fixes'),
+                      autoprefixer({browsers: ['>1%','last 4 versions','Firefox ESR','not ie < 9', // React doesn't support IE8 anyway
+                         ],flexbox: 'no-2009',}),
+                        ],
+                      },
+                  },
+                {
+                  loader: require.resolve('less-loader'),
+                  options: {
+                    modules: false,
+                    javascriptEnabled:true,
+                    modifyVars: {"@primary-color": "#f9c700"}
+                  }
+                }
+              ]
+            },
             {
               test: cssModuleRegex,
               use: getStyleLoaders({
